@@ -15,6 +15,13 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Select the newest Xcode (generated project format needs Xcode 16+)
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          echo "Selecting $LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
+
       - name: Lower deployment target to macOS 12.0
         run: |
           sed -i '' 's/macOS: "13.0"/macOS: "12.0"/' project.yml
