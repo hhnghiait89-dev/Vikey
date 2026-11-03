@@ -40,10 +40,32 @@ enum Preferences {
 }
 
 enum LaunchAtLogin {
-    static var isEnabled: Bool { SMAppService.mainApp.status == .enabled }
+    // macOS 12 backport (fork patch): SMAppService is macOS 13+, so launch-at-login
+    // is managed through a per-user LaunchAgent plist instead.
+    private static var plistURL: URL {
+        let label = Bundle.main.bundleIdentifier ?? "com.devuap.vikey"
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents/\(label).plist")
+    }
+
+    static var isEnabled: Bool { FileManager.default.fileExists(atPath: plistURL.path) }
+
     static func set(_ on: Bool) {
         do {
-            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            if on {
+                let label = Bundle.main.bundleIdentifier ?? "com.devuap.vikey"
+                let program = Bundle.main.executablePath ?? (Bundle.main.bundlePath + "/Contents/MacOS/Vikey")
+                let plist: [String: Any] = [
+                    "Label": label,
+                    "ProgramArguments": [program],
+                    "RunAtLoad": true,
+                ]
+                let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+                try FileManager.default.createDirectory(at: plistURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: plistURL, options: .atomic)
+            } else if FileManager.default.fileExists(atPath: plistURL.path) {
+                try FileManager.default.removeItem(at: plistURL)
+            }
         } catch {
             NSLog("Vikey: launch at login change failed: \(error)")
         }
