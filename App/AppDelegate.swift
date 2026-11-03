@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 addMenuItem(menu, "Cấp quyền cho Vikey…", #selector(menuShowOnboarding))
                 menu.addItem(.separator())
             }
-            let hotkey = Hotkey(raw: UserDefaults.standard.string(forKey: PrefKey.hotkey) ?? Hotkey.defaultValue)
+            let hotkey = Hotkey(raw: UserDefaults.standard.object(forKey: PrefKey.hotkey) as? Int ?? Hotkey.defaultValue)
             let languageItem = addMenuItem(menu, "Tiếng Việt   \(hotkey.display)", #selector(menuToggleLanguage))
             languageItem.state = state.language == 1 ? .on : .off
             let autoItem = addMenuItem(menu, "Tự chuyển Anh/Việt", #selector(menuToggleAutoSwitch))
