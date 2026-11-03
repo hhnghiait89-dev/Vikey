@@ -131,11 +131,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         MainActor.assumeIsolated { AppState.shared.frontAppChanged() }
     }
 
-    @objc private func menuShowOnboarding() { OnboardingWindow.show() }
-    @objc private func menuShowMain() { Windows.main.show() }
+    @objc private func menuShowOnboarding() { MainActor.assumeIsolated { OnboardingWindow.show() } }
+    @objc private func menuShowMain() { MainActor.assumeIsolated { Windows.main.show() } }
     @objc private func menuOpenFeedback() { Feedback.open() }
     @objc private func menuCheckForUpdates() { Updater.shared.checkForUpdates() }
-    @objc private func menuShowAbout() { AboutPanel.show() }
+    @objc private func menuShowAbout() { MainActor.assumeIsolated { AboutPanel.show() } }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
     /// Opening Vikey again while it runs (Finder, Spotlight, Dock) shows the main window.
