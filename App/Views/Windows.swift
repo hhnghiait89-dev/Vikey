@@ -23,7 +23,7 @@ final class HostedWindow<Content: View> {
     func show() {
         if window == nil {
             let host = NSHostingController(rootView: AnyView(content().environmentObject(AppState.shared)))
-            host.sizingOptions = []   // size is set once below; live content-size tracking loops in AppKit's constraint pass
+            if #available(macOS 13.0, *) { host.sizingOptions = [] }   // size is set once below; live content-size tracking loops in AppKit's constraint pass (sizingOptions is macOS 13+; skipped on 12)
             self.host = host
             let w = NSWindow(contentViewController: host)
             w.title = title

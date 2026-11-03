@@ -103,7 +103,7 @@ private struct StatsGrid: View {
     var body: some View {
         let periods = [Self.sum(stats, days: 1), Self.sum(stats, days: 7), Self.sum(stats, days: 0)]
         // macOS 12 backport (fork patch): Grid/GridRow are macOS 13+; LazyVGrid (macOS 11+) lays the same cells out.
-        LazyVGrid(columns: [GridItem(.flexible, alignment: .leading), GridItem(.flexible, spacing: 28, alignment: .trailing), GridItem(.flexible, spacing: 28, alignment: .trailing), GridItem(.flexible, spacing: 28, alignment: .trailing)], spacing: 6) {
+        LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), spacing: 28, alignment: .trailing), GridItem(.flexible(), spacing: 28, alignment: .trailing), GridItem(.flexible(), spacing: 28, alignment: .trailing)], spacing: 6) {
             Text("")
             Text("Hôm nay").bold(); Text("7 ngày").bold(); Text("Tất cả").bold()
             ForEach(rows, id: \.0) { row in
