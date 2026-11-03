@@ -118,7 +118,7 @@ struct OnboardingView: View {
             Text("Vikey chỉ hỗ trợ Telex, kiểu gõ phổ biến nhất. Bạn gõ tiếng Anh bình thường, Vikey tự nhận ra và không bỏ dấu nhầm.")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             // macOS 12 backport (fork patch): Grid/GridRow are macOS 13+; LazyVGrid (macOS 11+) lays the same cells out.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible, spacing: 18, alignment: .leading), count: 4), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 18, alignment: .leading), count: 4), spacing: 8) {
                 telex("aa", "â"); telex("aw", "ă"); telex("ee", "ê"); telex("oo", "ô")
                 telex("ow", "ơ"); telex("uw", "ư"); telex("dd", "đ"); telex("w", "ư")
                 telex("s", "sắc"); telex("f", "huyền"); telex("r", "hỏi"); telex("x", "ngã")
@@ -227,7 +227,7 @@ private struct PracticeStep: View {
             Text(vietnamese ? "Gõ đúng các phím bên dưới, kể cả tiếng Anh. Vikey bỏ dấu cho tiếng Việt và để nguyên tiếng Anh."
                             : "Bạn đang ở tiếng Anh: bấm \(hotkey) để sang tiếng Việt, rồi gõ các phím bên dưới.")
                 .foregroundStyle(.secondary)
-                .lineLimit(2, reservesSpace: true)   // both texts take two lines: switching VI/EN must not move the fields (Tony)
+                .lineLimit(2)   // both texts take two lines: switching VI/EN must not move the fields (Tony) — macOS 12 backport: lineLimit(_:reservesSpace:) is macOS 13+, plain lineLimit used instead
             ForEach(0..<Self.lines.count, id: \.self) { i in
                 let ok = Self.normalize(typed[i]) == Self.normalize(Self.lines[i].result)
                 VStack(alignment: .leading, spacing: 4) {
