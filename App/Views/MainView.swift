@@ -38,8 +38,8 @@ struct MainView: View {
                     Section { generalRows }
                 }
             }
-            .formStyle(.grouped)
-            .scrollDisabled(true)
+            // macOS 12 backport (fork patch): .formStyle(.grouped) and .scrollDisabled
+            // are macOS 13+; the macOS 12 Form default is close enough.
             .padding(.bottom, 8)
         }
         .frame(width: 460)
@@ -103,7 +103,7 @@ struct MainView: View {
     // MARK: rows of each tab
 
     @ViewBuilder private var hotkeyRows: some View {
-                LabeledContent {
+                LabeledRow {
                     HotkeyRecorder(raw: Binding(get: { hotkeyRaw }, set: { hotkeyRaw = $0; Preferences.apply() }))
                 } label: {
                     Tip("Phím chuyển Anh/Việt", "Bấm tổ hợp phím này để chuyển giữa tiếng Việt và tiếng Anh. Bấm vào ô để đặt phím khác.")
@@ -160,7 +160,7 @@ struct MainView: View {
                     Tip("Bảng emoji", "Bấm phím tắt để mở bảng emoji ở giữa màn hình. Tìm bằng tiếng Việt hoặc tiếng Anh, gõ Telex vẫn tìm được: \"ngựa\", \"horse\" đều ra 🐴. Enter để chèn, Esc để đóng.")
                 }
                 if emojiOn != 0 {
-                    LabeledContent {
+                    LabeledRow {
                         HotkeyRecorder(raw: Binding(get: { emojiKey }, set: { k in
                             guard k != hotkeyRaw & ~0x8000 else { return }   // already the Vietnamese/English switch
                             emojiKey = k & ~0x8000; Preferences.apply()
@@ -207,7 +207,7 @@ struct MainView: View {
                 Toggle(isOn: Binding(get: { updater.automatic }, set: { updater.automatic = $0 })) {
                     Tip("Tự động cập nhật", "Mỗi ngày Vikey kiểm tra bản mới trên vikey.app, tự tải về và cài khi bạn thoát Vikey hoặc tắt máy.")
                 }
-                LabeledContent {
+                LabeledRow {
                     Button("Gửi góp ý…") { Feedback.open() }
                 } label: {
                     Tip("Góp ý", "Báo lỗi hoặc góp ý cho Vikey: mở trang vikey.app/feedback trong trình duyệt.")
@@ -284,6 +284,20 @@ struct Tip: View {
 /// Binds an Int (0/1) preference used by the C core to a Toggle, applying it on change.
 func flag(_ value: Binding<Int>) -> Binding<Bool> {
     Binding(get: { value.wrappedValue != 0 }, set: { value.wrappedValue = $0 ? 1 : 0; Preferences.apply() })
+}
+
+/// macOS 12 backport (fork patch): stand-in for LabeledContent (macOS 13+) —
+/// the label on the left, the content right-aligned.
+struct LabeledRow<Content: View, Label: View>: View {
+    @ViewBuilder let content: Content
+    @ViewBuilder let label: Label
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            label
+            Spacer()
+            content
+        }
+    }
 }
 
 /// Reports the natural layout height of MainView's content to HostedWindow.

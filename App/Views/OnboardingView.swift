@@ -117,11 +117,12 @@ struct OnboardingView: View {
             Text("Vikey dùng kiểu gõ Telex").font(.title2.weight(.semibold))
             Text("Vikey chỉ hỗ trợ Telex, kiểu gõ phổ biến nhất. Bạn gõ tiếng Anh bình thường, Vikey tự nhận ra và không bỏ dấu nhầm.")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
-                GridRow { telex("aa", "â"); telex("aw", "ă"); telex("ee", "ê"); telex("oo", "ô") }
-                GridRow { telex("ow", "ơ"); telex("uw", "ư"); telex("dd", "đ"); telex("w", "ư") }
-                GridRow { telex("s", "sắc"); telex("f", "huyền"); telex("r", "hỏi"); telex("x", "ngã") }
-                GridRow { telex("j", "nặng"); telex("z", "xoá dấu"); Color.clear.frame(width: 1, height: 1); Color.clear.frame(width: 1, height: 1) }
+            // macOS 12 backport (fork patch): Grid/GridRow are macOS 13+; LazyVGrid (macOS 11+) lays the same cells out.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible, spacing: 18, alignment: .leading), count: 4), spacing: 8) {
+                telex("aa", "â"); telex("aw", "ă"); telex("ee", "ê"); telex("oo", "ô")
+                telex("ow", "ơ"); telex("uw", "ư"); telex("dd", "đ"); telex("w", "ư")
+                telex("s", "sắc"); telex("f", "huyền"); telex("r", "hỏi"); telex("x", "ngã")
+                telex("j", "nặng"); telex("z", "xoá dấu"); Color.clear.frame(width: 1, height: 1); Color.clear.frame(width: 1, height: 1)
             }
             .padding(14)
             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
