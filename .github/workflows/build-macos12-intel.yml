@@ -1,0 +1,43 @@
+name: build-macos12-intel
+# Build Vikey for macOS 12 (Monterey) Intel — prepared for Nghia.
+# Upstream project targets macOS 13.0 and ships no macOS CI build,
+# so this workflow lowers the deployment target to 12.0 and builds
+# an unsigned x86_64 .app on a GitHub macOS runner.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Lower deployment target to macOS 12.0
+        run: |
+          sed -i '' 's/macOS: "13.0"/macOS: "12.0"/' project.yml
+          grep -A1 deploymentTarget project.yml
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build (Intel x86_64, unsigned)
+        run: |
+          xcodebuild -project Vikey.xcodeproj -scheme Vikey -configuration Release \
+            ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO MACOSX_DEPLOYMENT_TARGET=12.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath build build
+
+      - name: Package the app
+        run: |
+          APP=$(find build -name 'Vikey.app' -type d | head -1)
+          echo "Built: $APP"
+          ditto -c -k --keepParent "$APP" Vikey-macos12-intel.zip
+          ls -la Vikey-macos12-intel.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vikey-macos12-intel
+          path: Vikey-macos12-intel.zip
