@@ -28,20 +28,25 @@ struct MainView: View {
         VStack(spacing: 0) {
             header
             tabBar
-            Form {
+            // macOS 12 backport (fork patch): this window was designed for the macOS 13
+            // grouped Form style. The macOS 12 legacy Form mis-measures its own height
+            // (the window then clips rows) and squeezes controls into a narrow column,
+            // so the settings are laid out by hand as cards instead — same rows, same
+            // bindings, drawn with plain stacks that size exactly on macOS 12.
+            VStack(spacing: 12) {
                 switch tab {
-                case "auto": Section { autoRows }
-                case "viet": Section { vietRows }
-                case "emoji": Section { emojiRows }
-                case "excluded": Section { excludedRows }
+                case "auto": card { autoRows }
+                case "viet": card { vietRows }
+                case "emoji": card { emojiRows }
+                case "excluded": card { excludedRows }
                 default:
-                    Section { hotkeyRows }
-                    Section { generalRows }
+                    card { hotkeyRows }
+                    card { generalRows }
                 }
             }
-            // macOS 12 backport (fork patch): .formStyle(.grouped) and .scrollDisabled
-            // are macOS 13+; the macOS 12 Form default is close enough.
-            .padding(.bottom, 8)
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 16)
         }
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
@@ -66,6 +71,19 @@ struct MainView: View {
         } message: {
             Text("Vào Quyền riêng tư & Bảo mật › Tự động hoá, bật trình duyệt của bạn dưới Vikey, rồi bật lại tuỳ chọn này.")
         }
+    }
+
+    /// One settings card: a rounded panel on the window background, the rows stacked
+    /// with even spacing — what the grouped Form style would have drawn on macOS 13.
+    private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 11) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
     }
 
     // MARK: tabs
@@ -132,23 +150,39 @@ struct MainView: View {
                 .disabled(smartSwitch == 0)
     }
     @ViewBuilder private var vietRows: some View {
-                Picker(selection: Binding(get: { typingMethod }, set: { typingMethod = $0; Preferences.apply() })) {
-                    Text("Telex").tag(0)
-                    Text("VNI").tag(1)
+                LabeledRow {
+                    Picker("", selection: Binding(get: { typingMethod }, set: { typingMethod = $0; Preferences.apply() })) {
+                        Text("Telex").tag(0)
+                        Text("VNI").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 } label: {
                     Tip("Kiểu gõ", "Telex: bỏ dấu bằng phím chữ (s, f, r, x, j, w...). VNI: bỏ dấu bằng hàng phím số — 1 sắc, 2 huyền, 3 hỏi, 4 ngã, 5 nặng, 6 mũ (â ê ô), 7 móc (ơ ư), 8 ă, 9 đ, 0 xoá dấu. Khi dùng VNI, tính năng tự chuyển Anh/Việt tạm tắt.")
                 }
-                Picker(selection: Binding(get: { telexStyle }, set: { telexStyle = $0; Preferences.apply() })) {
-                    Text("Telex").tag(0)
-                    Text("Telex đơn giản 1").tag(1)
-                    Text("Telex đơn giản 2").tag(2)
+                LabeledRow {
+                    Picker("", selection: Binding(get: { telexStyle }, set: { telexStyle = $0; Preferences.apply() })) {
+                        Text("Telex").tag(0)
+                        Text("Telex đơn giản 1").tag(1)
+                        Text("Telex đơn giản 2").tag(2)
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(typingMethod == 1)
                 } label: {
                     Tip("Kiểu Telex", "Telex: [ ra ơ, ] ra ư, w ra ư. Telex đơn giản 1: [ ] là dấu ngoặc, w đứng riêng vẫn là w. Telex đơn giản 2: [ ] là dấu ngoặc, w vẫn ra ư. Cả ba kiểu đều gõ uw, ow, aw ra ư, ơ, ă.")
                 }
-                .disabled(typingMethod == 1)
-                Picker(selection: Binding(get: { modern }, set: { modern = $0; Preferences.apply() })) {
-                    Text("hoà, thuý").tag(1)
-                    Text("hòa, thúy").tag(0)
+                .opacity(typingMethod == 1 ? 0.45 : 1)
+                LabeledRow {
+                    Picker("", selection: Binding(get: { modern }, set: { modern = $0; Preferences.apply() })) {
+                        Text("hoà, thuý").tag(1)
+                        Text("hòa, thúy").tag(0)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 } label: {
                     Tip("Đặt dấu", "Vị trí dấu thanh với oa, oe, uy: kiểu mới (hoà, thuý) hoặc kiểu cũ (hòa, thúy).")
                 }
@@ -294,8 +328,8 @@ func flag(_ value: Binding<Int>) -> Binding<Bool> {
     Binding(get: { value.wrappedValue != 0 }, set: { value.wrappedValue = $0 ? 1 : 0; Preferences.apply() })
 }
 
-/// macOS 12 backport (fork patch): stand-in for LabeledContent (macOS 13+) —
-/// the label on the left, the content right-aligned.
+/// Stand-in for LabeledContent (macOS 13+): the label on the left, the content
+/// right-aligned on the same row.
 struct LabeledRow<Content: View, Label: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let label: Label
