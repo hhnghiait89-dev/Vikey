@@ -10,6 +10,7 @@ struct MainView: View {
     @AppStorage(PrefKey.restoreIfInvalid) private var restore = 1
     @AppStorage(PrefKey.teencode) private var teencode = 1
     @AppStorage(PrefKey.telexStyle) private var telexStyle = 0
+    @AppStorage(PrefKey.typingMethod) private var typingMethod = 0
     @AppStorage(PrefKey.mainTab) private var tab = "general"
     @AppStorage(PrefKey.autoSwitch) private var autoSwitch = 1
     @AppStorage(PrefKey.smartSwitch) private var smartSwitch = 1
@@ -131,13 +132,20 @@ struct MainView: View {
                 .disabled(smartSwitch == 0)
     }
     @ViewBuilder private var vietRows: some View {
+                Picker(selection: Binding(get: { typingMethod }, set: { typingMethod = $0; Preferences.apply() })) {
+                    Text("Telex").tag(0)
+                    Text("VNI").tag(1)
+                } label: {
+                    Tip("Kiểu gõ", "Telex: bỏ dấu bằng phím chữ (s, f, r, x, j, w...). VNI: bỏ dấu bằng hàng phím số — 1 sắc, 2 huyền, 3 hỏi, 4 ngã, 5 nặng, 6 mũ (â ê ô), 7 móc (ơ ư), 8 ă, 9 đ, 0 xoá dấu. Khi dùng VNI, tính năng tự chuyển Anh/Việt tạm tắt.")
+                }
                 Picker(selection: Binding(get: { telexStyle }, set: { telexStyle = $0; Preferences.apply() })) {
                     Text("Telex").tag(0)
                     Text("Telex đơn giản 1").tag(1)
                     Text("Telex đơn giản 2").tag(2)
                 } label: {
-                    Tip("Kiểu gõ", "Telex: [ ra ơ, ] ra ư, w ra ư. Telex đơn giản 1: [ ] là dấu ngoặc, w đứng riêng vẫn là w. Telex đơn giản 2: [ ] là dấu ngoặc, w vẫn ra ư. Cả ba kiểu đều gõ uw, ow, aw ra ư, ơ, ă.")
+                    Tip("Kiểu Telex", "Telex: [ ra ơ, ] ra ư, w ra ư. Telex đơn giản 1: [ ] là dấu ngoặc, w đứng riêng vẫn là w. Telex đơn giản 2: [ ] là dấu ngoặc, w vẫn ra ư. Cả ba kiểu đều gõ uw, ow, aw ra ư, ơ, ă.")
                 }
+                .disabled(typingMethod == 1)
                 Picker(selection: Binding(get: { modern }, set: { modern = $0; Preferences.apply() })) {
                     Text("hoà, thuý").tag(1)
                     Text("hòa, thúy").tag(0)
