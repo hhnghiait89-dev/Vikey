@@ -115,7 +115,7 @@ struct OnboardingView: View {
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Vikey dùng kiểu gõ Telex").font(.title2.weight(.semibold))
-            Text("Vikey chỉ hỗ trợ Telex, kiểu gõ phổ biến nhất. Bạn gõ tiếng Anh bình thường, Vikey tự nhận ra và không bỏ dấu nhầm.")
+            Text("Vikey hỗ trợ hai kiểu gõ Telex và VNI (đổi trong Cài đặt). Bảng dưới đây là Telex, kiểu gõ phổ biến nhất. Bạn gõ tiếng Anh bình thường, Vikey tự nhận ra và không bỏ dấu nhầm.")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             // macOS 12 backport (fork patch): Grid/GridRow are macOS 13+; LazyVGrid (macOS 11+) lays the same cells out.
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 18, alignment: .leading), count: 4), spacing: 8) {
