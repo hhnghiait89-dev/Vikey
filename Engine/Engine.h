@@ -149,6 +149,12 @@ extern int vTeencode;
  *  2 = Simple Telex 2 ([ and ] are brackets, a lone w is still ư). uw / ow / aw work in all three. Defined in Engine.cpp. */
 extern int vTelexStyle;
 
+/** Input method (fork addition): 0 = Telex family (vTelexStyle applies), 1 = VNI — the number
+ *  row carries the tones and diacritics (1-5 tones, 6 circumflex, 7 horn, 8 breve, 9 đ, 0 removes
+ *  the tone) and every letter is a plain letter. Auto switch by typing is Telex-only: the app
+ *  layer keeps vAutoSwitchByTyping at 0 while this is 1. Defined in Engine.cpp. */
+extern int vInputMethod;
+
 /**
  * Call at the end of the first English word after a doubled tone key switched to English (D18).
  * keys: the letters typed since the switch. When the word with both presses of the key is not
