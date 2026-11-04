@@ -51,10 +51,10 @@ void VikeyDriver::switchTo(int lang) { vLanguage = lang; startNewSession(); vAut
 void VikeyDriver::updatePause(double now) {
     if (paused && now >= pauseUntil) {
         paused = false;
-        vAutoSwitchByTyping = autoSwitch ? 1 : 0;
+        vAutoSwitchByTyping = (autoSwitch && vInputMethod == 0) ? 1 : 0;   //auto switch reads keys as Telex: off in VNI
         enCount = 0; enValid = false;      //the word being typed now wasn't followed from its start
     }
-    if (!paused) vAutoSwitchByTyping = autoSwitch ? 1 : 0;
+    if (!paused) vAutoSwitchByTyping = (autoSwitch && vInputMethod == 0) ? 1 : 0;   //auto switch reads keys as Telex: off in VNI
 }
 
 void VikeyDriver::manualSwitch(double now) {
