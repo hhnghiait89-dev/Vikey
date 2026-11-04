@@ -143,6 +143,8 @@ bool isWordBreak(const vKeyEvent& event, const vKeyEventState& state, const Uint
         return true;
     if (vTelexStyle != 0 && (data == KEY_LEFT_BRACKET || data == KEY_RIGHT_BRACKET))   //Simple Telex: brackets are punctuation (D56)
         return true;
+    if (vInputMethod == 1 && (data == KEY_LEFT_BRACKET || data == KEY_RIGHT_BRACKET))   //VNI has no standalone bracket keys: [ ] are punctuation
+        return true;
     for (i = 0; i < _breakCode.size(); i++) {
         if (_breakCode[i] == data) {
             return true;
@@ -168,6 +170,7 @@ Byte _spellingEndIndex = 0;
  *  "ừk"). Idea from VietTelex (MIT). "wá" isn't possible in Telex: w is ư. */
 int vTeencode = 1;   //on by default (Tony, 2026-10-31)
 int vTelexStyle = 0;  //Telex (D56); 1 and 2 are the Simple Telex styles from OpenKey
+int vInputMethod = 0;  //input method (fork addition): 0 = Telex family, 1 = VNI
 #include "TeencodeData.h"
 static bool _teenRule = false;   //this word is valid only by a teencode rule: kept at its end only if it's a known word
 /** Is the word in TypingWord a known teencode word? (letters with ^ / +, tone digit last; see build_teencode.py) */
@@ -1115,7 +1118,181 @@ void checkForStandaloneChar(const Uint16& data, const bool& isCaps, const Uint32
 }
 
 
+// MARK: - VNI input method (fork addition)
+//
+// VNI types tones and diacritics with the number row: 1 sắc, 2 huyền, 3 hỏi, 4 ngã, 5 nặng,
+// 6 circumflex (â ê ô), 7 horn (ơ ư), 8 breve (ă), 9 stroke (đ), 0 removes the tone.
+// Every letter is a plain letter. The digit handlers below reuse the Telex machinery — the
+// mark, circumflex, horn/breve and đ paths with their spelling tables — so a word typed in
+// VNI ends in exactly the state the equivalent Telex word would; only the keys differ.
+// Digits that can't apply (no vowel yet, wrong vowel, invalid syllable) type themselves,
+// like a tone key that doesn't fit in Telex.
+
+/// The Telex tone key and mark mask a VNI tone digit stands for (digits 1-5 only).
+static void vniMarkForDigit(const Uint16& data, Uint16& markKey, Uint32& markMask) {
+    switch (data) {
+        case KEY_1: markKey = KEY_S; markMask = MARK1_MASK; break;
+        case KEY_2: markKey = KEY_F; markMask = MARK2_MASK; break;
+        case KEY_3: markKey = KEY_R; markMask = MARK3_MASK; break;
+        case KEY_4: markKey = KEY_X; markMask = MARK4_MASK; break;
+        default:    markKey = KEY_J; markMask = MARK5_MASK; break;   //KEY_5
+    }
+}
+
+static void handleVNIKey(const Uint16& data, const bool& isCaps) {
+    if (!IS_NUMBER_KEY(data)) {   //every letter and symbol is plain in VNI
+        insertKey(data, isCaps);
+        return;
+    }
+
+    if (data == KEY_0) {   //remove the tone, like Telex z
+        removeMark();
+        if (!isChanged) {
+            insertKey(data, isCaps);
+        }
+        return;
+    }
+
+    if (data == KEY_1 || data == KEY_2 || data == KEY_3 || data == KEY_4 || data == KEY_5) {
+        Uint16 markKey;
+        Uint32 markMask;
+        vniMarkForDigit(data, markKey, markMask);
+        //the Telex mark branch, with the digit standing in for the tone key
+        for (auto& vowelEntry : _vowelForMark) {
+            vector<vector<Uint16>>& charset = vowelEntry.second;
+            isCorect = false;
+            isChanged = false;
+            k = _index;
+            for (l = 0; l < (int)charset.size(); l++) {
+                if (_index < charset[l].size())
+                    continue;
+                isCorect = true;
+                checkCorrectVowel(charset, l, k, markKey);
+
+                if (isCorect) {
+                    isChanged = true;
+                    insertMark(markMask);
+                    break;
+                }
+            }
+
+            if (isCorect) {
+                break;
+            }
+        }
+
+        if (!isChanged) {
+            insertKey(data, isCaps);
+        }
+        return;
+    }
+
+    if (data == KEY_9) {   //đ, through the same path as the Telex d key
+        isCorect = false;
+        isChanged = false;
+        k = _index;
+        for (i = 0; i < (int)_consonantD.size(); i++) {
+            if (_index < _consonantD[i].size())
+                continue;
+            isCorect = true;
+            checkCorrectVowel(_consonantD, i, k, KEY_D);
+
+            //allow d after consonant
+            if (!isCorect && _index - 2 >= 0 && CHR(_index-1) == KEY_D && IS_CONSONANT(CHR(_index-2))) {
+                isCorect = true;
+            }
+            if (isCorect) {
+                isChanged = true;
+                insertD(KEY_D, isCaps);
+                break;
+            }
+        }
+
+        if (!isChanged) {
+            insertKey(data, isCaps);
+        }
+        return;
+    }
+
+    if (data == KEY_6) {   //circumflex on the last a/e/o of the vowel run, like doubling it in Telex
+        findAndCalculateVowel();
+        bool done = false;
+        for (int pos = VEI; pos >= VSI && vowelCount > 0 && !done; pos--) {
+            Uint16 cand = CHR(pos);
+            if (cand != KEY_A && cand != KEY_E && cand != KEY_O)
+                continue;
+            if (TypingWord[pos] & TONEW_MASK)
+                break;   //ă/ơ/ư can't take a circumflex
+            vector<vector<Uint16>>& charset = _vowel[cand];
+            for (i = 0; i < (int)charset.size(); i++) {
+                if (_index < charset[i].size())
+                    continue;
+                isCorect = true;
+                k = _index;
+                checkCorrectVowel(charset, i, k, cand);
+                if (isCorect) {
+                    insertAOE(cand, isCaps);
+                    done = true;
+                    break;
+                }
+            }
+            break;   //only the last circumflex-able vowel is ever the target
+        }
+        if (!done) {
+            insertKey(data, isCaps);
+        }
+        return;
+    }
+
+    //7 horn (ơ ư), 8 breve (ă): the Telex w path, gated to the vowels the digit may touch.
+    //The gate mirrors insertW's own choice of target, so its do-nothing case can't be reached:
+    //a digit that would land on the wrong vowel (7 after a, 8 after o/u) types itself instead.
+    findAndCalculateVowel();
+    bool allow = false;
+    if (vowelCount == 1) {
+        Uint16 v = CHR(VSI);
+        allow = (data == KEY_7) ? (v == KEY_O || v == KEY_U) : (v == KEY_A);
+    } else if (vowelCount == 2) {
+        Uint16 a = CHR(VSI), b = CHR(VSI + 1);
+        if (data == KEY_7)
+            allow = (a == KEY_U && (b == KEY_O || b == KEY_A || b == KEY_I || b == KEY_U)) ||
+                    (a == KEY_O && b == KEY_I) || (a == KEY_I && b == KEY_O);
+        else
+            allow = (a == KEY_O && b == KEY_A);
+    } else if (vowelCount == 3) {
+        allow = (data == KEY_7) && CHR(VSI) == KEY_U && CHR(VSI + 1) == KEY_O;   //"uoi" -> ươi
+    }
+    if (allow) {
+        //the Telex w validation, then insertW itself
+        vector<vector<Uint16>>& charset = _vowel[KEY_W];
+        isCorect = false;
+        isChanged = false;
+        k = _index;
+        for (i = 0; i < (int)charset.size(); i++) {
+            if (_index < charset[i].size())
+                continue;
+            isCorect = true;
+            checkCorrectVowel(charset, i, k, KEY_W);
+
+            if (isCorect) {
+                isChanged = true;
+                insertW(KEY_W, isCaps);
+                break;
+            }
+        }
+        if (isChanged) {
+            return;
+        }
+    }
+    insertKey(data, isCaps);
+}
+
 void handleMainKey(const Uint16& data, const bool& isCaps) {
+    if (vInputMethod == 1) {   //VNI: the number row carries the tones, every letter is plain
+        handleVNIKey(data, isCaps);
+        return;
+    }
+
     //if is Z key, remove mark
     if (IS_KEY_Z(data)) {
         removeMark();
@@ -2242,7 +2419,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
 
         insertState(data, _isCaps); //save state
         
-        if (!IS_SPECIALKEY(data) || tempDisableKey) { //do nothing
+        if ((!IS_SPECIALKEY(data) && !(vInputMethod == 1 && IS_NUMBER_KEY(data))) || tempDisableKey) { //do nothing: a plain key (in VNI, digits are special: they carry the tones)
             hCode = vDoNothing;
             hBPC = 0;
             hNCC = 0;
