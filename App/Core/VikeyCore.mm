@@ -320,6 +320,7 @@ extern "C" {
     }
 
     static int AutoSwitchForApp(NSString* app) {
+        if (vInputMethod == 1) return 0;   //auto switch reads the keys as Telex: off while VNI is the input method (fork addition)
         if (app.length > 0) {
             NSNumber* own = [[NSUserDefaults standardUserDefaults] dictionaryForKey:kAutoSwitchPerApp][app];
             if (own != nil) return [own intValue] ? 1 : 0;
@@ -384,6 +385,7 @@ extern "C" {
         vRestoreIfWrongSpelling = get(@"RestoreIfInvalidWord", 1);
         vTeencode = get(@"Teencode", 1);   // D53: zui zẻ, zậy, gòy, thík
         vTelexStyle = get(@"TelexStyle", 0);   // D56: Telex / Simple Telex 1 / 2
+        vInputMethod = get(@"TypingMethod", 0);   // fork addition: 0 Telex, 1 VNI
         vUseModernOrthography = get(@"ModernOrthography", 1);
                 vUseSmartSwitchKey = get(@"UseSmartSwitchKey", 1);
         vAutoSwitchByTyping = AutoSwitchPaused() ? 0 : AutoSwitchForApp(_frontMostApp);
